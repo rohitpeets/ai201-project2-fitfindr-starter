@@ -81,7 +81,7 @@ def search_listings(
         listings = [l for l in listings if size_lower in l["size"].lower()]
 
     # Step 3: Score by keyword overlap with description
-    keywords = set(re.findall(r"\w+", description.lower()))
+    keywords = set(description.lower().split())
 
     def score(listing: dict) -> int:
         searchable = " ".join([
@@ -93,7 +93,8 @@ def search_listings(
             " ".join(listing.get("style_tags", [])),
             " ".join(listing.get("colors", [])),
         ]).lower()
-        tokens = set(re.findall(r"\w+", searchable))
+        tokens = set(searchable.split())
+
         return len(keywords & tokens)
 
     # Step 4: Drop zero-score listings, sort best-first
@@ -166,7 +167,7 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 
     client = _get_groq_client()
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
     )
@@ -233,7 +234,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     # Step 3: Call the LLM at higher temperature for variety
     client = _get_groq_client()
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9,
     )
