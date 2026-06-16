@@ -1,17 +1,17 @@
 # 👕 FitFindr
 
-FitFindr is an AI-powered thrift shopping assistant that helps users discover secondhand clothing, build outfits using their existing wardrobe, and generate social-media-ready style captions.
+FitFindr is an AI-powered thrift shopping assistant that helps users discover secondhand clothing, generate outfit recommendations using their wardrobe, and create shareable social-media-style fit cards.
 
 The agent follows a structured planning workflow that:
 
-1. Understands what the user is looking for
-2. Searches a secondhand marketplace dataset
-3. Recommends outfit combinations
-4. Creates a shareable "Fit Card" caption
+1. Parses a user's shopping request
+2. Searches a secondhand clothing dataset
+3. Suggests outfit combinations
+4. Generates a TikTok/Instagram-style caption
 
 ---
 
-## 📁 Project Structure
+# Project Structure
 
 ```text
 ai201-project2-fitfindr-starter/
@@ -33,15 +33,13 @@ ai201-project2-fitfindr-starter/
 
 ---
 
-## 🚀 Setup
+# Installation
 
-### 1. Install Dependencies
+Install project dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
-
-### 2. Configure API Key
 
 Create a `.env` file in the project root:
 
@@ -49,112 +47,101 @@ Create a `.env` file in the project root:
 GROQ_API_KEY=your_api_key_here
 ```
 
-You can obtain a free API key from:
-
-https://console.groq.com
-
 ---
 
-## 📊 Dataset Overview
+# Tool Inventory
 
-### listings.json
+## Tool 1: search_listings()
 
-Contains 40 mock secondhand clothing listings across multiple categories and fashion styles.
+### Purpose
 
-Each listing includes:
+Search the thrift listings dataset and return relevant listings based on user preferences.
 
-| Field       | Description               |
-| ----------- | ------------------------- |
-| id          | Unique listing identifier |
-| title       | Listing title             |
-| description | Item description          |
-| category    | Clothing category         |
-| style_tags  | Style labels              |
-| size        | Item size                 |
-| condition   | Item condition            |
-| price       | Listing price             |
-| colors      | Available colors          |
-| brand       | Brand name                |
-| platform    | Marketplace source        |
+### Inputs
 
-Load listings:
+| Parameter   | Type         | Description                                 |
+| ----------- | ------------ | ------------------------------------------- |
+| description | str          | Keywords describing the item the user wants |
+| size        | str | None   | Optional size filter                        |
+| max_price   | float | None | Optional maximum price filter               |
+
+### Output
 
 ```python
-from utils.data_loader import load_listings
-
-listings = load_listings()
+list[dict]
 ```
+
+Returns matching listings sorted by relevance.
+
+### Failure Handling
+
+Returns an empty list if no listings match the query.
 
 ---
 
-### wardrobe_schema.json
+## Tool 2: suggest_outfit()
 
-Defines the wardrobe structure used by FitFindr.
+### Purpose
 
-Includes:
+Generate outfit recommendations using the selected thrifted item and the user's wardrobe.
 
-* Wardrobe schema
-* Example wardrobe
-* Empty wardrobe template
+### Inputs
 
-Load example wardrobe:
+| Parameter | Type | Description             |
+| --------- | ---- | ----------------------- |
+| new_item  | dict | Selected thrift listing |
+| wardrobe  | dict | User wardrobe data      |
+
+### Output
 
 ```python
-from utils.data_loader import get_example_wardrobe
-
-wardrobe = get_example_wardrobe()
+str
 ```
+
+Returns an outfit recommendation.
+
+### Failure Handling
+
+If the wardrobe is empty, the tool generates general styling advice instead of specific outfit combinations.
+
+No exception is raised.
 
 ---
 
-# 🧠 How FitFindr Works
+## Tool 3: create_fit_card()
 
-FitFindr uses a sequential planning loop where each step depends on the successful completion of the previous step.
+### Purpose
 
-```text
-User Query
-    │
-    ▼
-Parse Query
-    │
-    ▼
-Search Listings
-    │
-    ▼
-Results Found?
- ┌──┴──┐
- │     │
-Yes    No
- │      │
- ▼      ▼
-Select  Return Error
-Item
- │
- ▼
-Suggest Outfit
- │
- ▼
-Create Fit Card
- │
- ▼
-Return Results
+Generate a social-media-style caption for the selected outfit.
+
+### Inputs
+
+| Parameter | Type | Description             |
+| --------- | ---- | ----------------------- |
+| outfit    | str  | Outfit recommendation   |
+| new_item  | dict | Selected thrift listing |
+
+### Output
+
+```python
+str
 ```
 
+Returns a 2–4 sentence Instagram/TikTok-style caption.
+
+### Failure Handling
+
+If outfit information is missing, a descriptive error message is returned instead of raising an exception.
+
 ---
+
+# How the Planning Loop Works
+
+The agent follows a sequential workflow where each step depends on the previous step.
 
 ## Step 1: Parse User Query
 
-The LLM extracts structured search criteria.
-
-### Example
-
-Input:
-
-```text
-vintage graphic tee under $30
-```
-
-Parsed Output:
+The user's natural-language request is parsed into structured search criteria:
 
 ```python
 {
@@ -168,323 +155,274 @@ Parsed Output:
 
 ## Step 2: Search Listings
 
-The agent searches the thrift dataset using the parsed criteria.
-
-### Filters Applied
-
-* Maximum price
-* Size matching
-* Keyword relevance
-
-### Example
+The agent calls:
 
 ```python
-search_listings(
-    description="vintage graphic tee",
-    size=None,
-    max_price=30.0
-)
+search_listings(description, size, max_price)
 ```
 
-Returns:
+### Decision Point
+
+If no results are found:
 
 ```python
-[
-    listing_1,
-    listing_2,
-    listing_3
-]
+session["error"] = "No listings found..."
 ```
 
-Sorted by relevance score.
+The agent exits early and does not continue.
+
+If results are found:
+
+```python
+session["selected_item"] = results[0]
+```
+
+The highest-ranked listing is selected.
 
 ---
 
-## Step 3: Select Best Match
+## Step 3: Generate Outfit Recommendation
 
-The highest-ranked result is selected.
-
-Example:
+The agent calls:
 
 ```python
-{
-    "title": "Y2K Baby Tee — Butterfly Print",
-    "price": 18.00,
-    "platform": "Depop"
-}
+suggest_outfit(selected_item, wardrobe)
 ```
 
-Stored as:
+If wardrobe items exist:
 
-```python
-session["selected_item"]
-```
+* Generate specific outfit combinations using named wardrobe pieces.
+
+If wardrobe is empty:
+
+* Generate general styling advice.
 
 ---
 
-## Step 4: Generate Outfit Recommendation
+## Step 4: Create Fit Card
 
-Using the selected item and the user's wardrobe:
-
-### If wardrobe contains items
-
-The LLM creates specific outfit combinations using named pieces from the wardrobe.
-
-### If wardrobe is empty
-
-The LLM provides general styling advice.
-
-Example:
-
-```text
-Pair the Y2K Baby Tee with baggy straight-leg jeans and chunky white sneakers for a relaxed vintage look.
-```
-
-Stored as:
+The agent calls:
 
 ```python
-session["outfit_suggestion"]
+create_fit_card(outfit_suggestion, selected_item)
 ```
+
+The tool generates a short social-media-ready caption.
 
 ---
 
-## Step 5: Create Fit Card
+## Step 5: Return Results
 
-The final step generates a short, social-media-style caption.
+The final outputs are returned to the Gradio interface:
 
-Example:
-
-```text
-Just scored this Y2K Baby Tee for $18 on Depop. Paired it with baggy denim and chunky sneakers for the perfect throwback vibe. Thrifted fits never miss.
-```
-
-Stored as:
-
-```python
-session["fit_card"]
-```
+* Top listing found
+* Outfit recommendation
+* Fit card caption
 
 ---
 
-# 🔄 Session State Management
+# State Management
 
-FitFindr uses a shared session dictionary to pass information between tools.
+FitFindr uses a shared session dictionary to store and pass information between tools.
 
 ```python
 session = {
     "query": "",
-    "wardrobe": {},
     "parsed": {},
     "search_results": [],
     "selected_item": None,
+    "wardrobe": {},
     "outfit_suggestion": None,
     "fit_card": None,
     "error": None
 }
 ```
 
+## Data Flow
+
+| Field             | Created By        | Used By                             |
+| ----------------- | ----------------- | ----------------------------------- |
+| query             | _new_session()    | Query Parser                        |
+| parsed            | Query Parser      | search_listings()                   |
+| search_results    | search_listings() | Item Selection                      |
+| selected_item     | Item Selection    | suggest_outfit(), create_fit_card() |
+| wardrobe          | _new_session()    | suggest_outfit()                    |
+| outfit_suggestion | suggest_outfit()  | create_fit_card()                   |
+| fit_card          | create_fit_card() | UI Output                           |
+| error             | Any Step          | app.py                              |
+
+Each tool reads from and writes to the session dictionary instead of directly passing data to another tool.
+
 ---
 
-## Session Fields
+# Error Handling Strategy
 
-| Field             | Populated By           | Used By            |
-| ----------------- | ---------------------- | ------------------ |
-| query             | Session Initialization | Query Parser       |
-| parsed            | Query Parser           | Search Tool        |
-| search_results    | Search Tool            | Item Selection     |
-| selected_item     | Item Selection         | Outfit Generator   |
-| wardrobe          | Session Initialization | Outfit Generator   |
-| outfit_suggestion | Outfit Generator       | Fit Card Generator |
-| fit_card          | Fit Card Generator     | User Interface     |
-| error             | Any Step               | App Interface      |
-
----
-
-# 🛠 Core Tools
-
-## 1. search_listings()
-
-### Purpose
-
-Find matching thrift listings.
-
-### Parameters
-
-```python
-search_listings(
-    description: str,
-    size: str | None,
-    max_price: float | None
-)
-```
-
-### Returns
-
-```python
-list[dict]
-```
-
-### Behavior
-
-* Loads dataset
-* Applies filters
-* Scores keyword matches
-* Sorts by relevance
-* Returns matching listings
+## search_listings()
 
 ### Failure Mode
 
-Returns:
+No matching listings are found.
+
+### Agent Response
 
 ```python
-[]
-```
-
-when no listings are found.
-
----
-
-## 2. suggest_outfit()
-
-### Purpose
-
-Generate styling recommendations.
-
-### Parameters
-
-```python
-suggest_outfit(
-    new_item: dict,
-    wardrobe: dict
+session["error"] = (
+    "No listings found matching your search. "
+    "Try different keywords, a different size, "
+    "or a higher price limit."
 )
 ```
 
-### Returns
+The planning loop exits immediately.
 
-```python
-str
+### Example Test
+
+Query:
+
+```text
+designer ballgown size XXS under $5
 ```
 
-### Behavior
+Result:
 
-* Uses wardrobe items when available
-* Generates personalized outfit ideas
-* Falls back to general styling advice if wardrobe is empty
+```text
+No listings found matching your search.
+```
+
+---
+
+## suggest_outfit()
 
 ### Failure Mode
 
-No exception raised.
+The wardrobe is empty.
 
-General styling advice is returned.
+### Agent Response
+
+Generate general styling advice.
+
+### Example
+
+Instead of:
+
+```text
+Pair with your Levi's jeans...
+```
+
+The tool returns:
+
+```text
+Graphic tees pair well with baggy jeans, cargo pants,
+and chunky sneakers for a relaxed vintage aesthetic.
+```
 
 ---
 
-## 3. create_fit_card()
-
-### Purpose
-
-Generate a shareable caption for social media.
-
-### Parameters
-
-```python
-create_fit_card(
-    outfit: str,
-    new_item: dict
-)
-```
-
-### Returns
-
-```python
-str
-```
-
-### Behavior
-
-* Uses outfit recommendation
-* Generates 2–4 sentence caption
-* Uses higher creativity settings for variety
+## create_fit_card()
 
 ### Failure Mode
 
-Returns an explanatory error message if no outfit suggestion exists.
+Outfit information is missing.
+
+### Agent Response
+
+Return:
+
+```text
+Missing outfit input — could not generate a fit card.
+Make sure suggest_outfit() ran successfully.
+```
+
+No exception is raised.
 
 ---
 
-# 🧪 Example Interaction
+# Example Interaction
 
-### User Query
-
-```text
-vintage graphic tee under $30
-```
-
-### Parsed Query
-
-```python
-{
-    "description": "vintage graphic tee",
-    "size": None,
-    "max_price": 30.0
-}
-```
-
-### Search Results
-
-```python
-[
-    listing1,
-    listing2,
-    listing3
-]
-```
-
-### Selected Item
-
-```python
-{
-    "title": "Y2K Baby Tee — Butterfly Print",
-    "price": 18.00,
-    "platform": "Depop"
-}
-```
-
-### Outfit Suggestion
+## User Query
 
 ```text
-Pair the Y2K Baby Tee with baggy jeans and chunky sneakers for a casual Y2K-inspired look.
+I'm looking for a vintage graphic tee under $30.
 ```
 
-### Fit Card
+## Selected Listing
 
 ```text
-Just scored this Y2K Baby Tee for $18 on Depop. Paired it with baggy denim and sneakers for the perfect throwback fit.
+Vintage Nirvana Band Tee
+$22.00
+Depop
+```
+
+## Outfit Suggestion
+
+```text
+Pair the Nirvana tee with baggy Levi's and white Air Force 1s
+for a laid-back 90s look.
+```
+
+## Fit Card
+
+```text
+Thrifted this Nirvana tee on Depop for $22 and I'm not okay 🖤
+Baggy jeans, chunky sneakers, done.
+Slow fashion forever.
 ```
 
 ---
 
-# ✅ Features
+# Spec Reflection
+
+## How the Spec Helped
+
+The planning document provided a clear structure before implementation began. Defining tool inputs, outputs, and failure modes beforehand made it easier to generate and verify code for each component independently.
+
+## How Implementation Diverged
+
+The original specification assumed simple size matching. During implementation, size matching was expanded to support partial matches such as "M" matching "S/M" because it produced more useful search results and improved the user experience.
+
+---
+
+# AI Usage
+
+## Example 1
+
+I used Claude to generate the implementation of `search_listings()` using the tool specification from `planning.md`.
+
+After reviewing the generated code, I validated it using:
+
+* A query with a strict price limit
+* A query expected to return one result
+* A query expected to return no results
+
+I adjusted the keyword scoring logic to improve result ranking.
+
+---
+
+## Example 2
+
+I used Claude to generate the `run_agent()` planning loop using the Planning Loop, State Management, and Architecture sections from `planning.md`.
+
+After testing, I revised the generated code to ensure the agent exited immediately when `search_listings()` returned an empty list and correctly populated the session dictionary on successful runs.
+
+---
+
+# Features
 
 * AI-powered query understanding
-* Secondhand listing search
-* Outfit recommendations
-* Wardrobe-aware styling
-* Social media caption generation
+* Thrift listing search
+* Wardrobe-aware outfit recommendations
+* Social-media-style caption generation
 * Session-based planning architecture
-* Graceful failure handling
+* Graceful error handling
 * Gradio web interface
 
 ---
 
-# 📌 Future Improvements
+# Future Improvements
 
-* Multi-item outfit generation
-* Better ranking and recommendation algorithms
-* Image-based clothing search
+* Image-based fashion search
 * Personalized style profiles
+* Saved wardrobes
+* Multi-item outfit generation
 * Marketplace integrations
-* Saved wardrobes and user accounts
-* Trend-aware fashion recommendations
-
----
+* Improved recommendation ranking
