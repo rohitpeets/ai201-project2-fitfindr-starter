@@ -15,8 +15,7 @@ You must have at least 3 tools. The three required tools are listed — add any 
 ### Tool 1: search_listings
 
 **What it does:**
-The tool loads a dataset of listings and accepts 3 fields (the keywords describing what the user is looking for,The size ,and the maximum size). It returns matching listing dicts sorted by relevance and returns nothing if no relevant listing available.
-
+The tool loads a dataset of listings and accepts 3 fields: the keywords describing what the user is looking for, the desired size, and the maximum price.
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
 - `description` (str):Keywords describing what the user is looking for.
@@ -34,13 +33,11 @@ It returns an empty list if nothing matches.
 ### Tool 2: suggest_outfit
 
 **What it does:**
-Given a thrifted outfit and the users outfit, it creates and suggests 2 outfits.
-
+Given a thrifted item and the user's wardrobe, it generates one or more outfit recommendations.
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
 - `new_item` (dict):It is a listing dictionary representing the item the user is looking to buy.
-- `wardrobe` (dict): A wardrobe dict comainting an item key which has a list of wardrobe item dicts.It may be empty.
-
+- `wardrobe` (dict):A wardrobe dict containing an items key
 **What it returns:**
 It returns a non empty string with an outfit suggestion and if the wardrobe is empty it gives general styling advice without raising an exception or returning an empty string.
 **What happens if it fails or returns nothing:**
@@ -65,8 +62,7 @@ A 2-4 sentence string that can be used as instagram/TikTok caption for that thri
 
 **What happens if it fails or returns nothing:**
 It should not raise an exception but should provide a descriptive error message.
-List the missing input object and raise a missing input message.
----
+Return a descriptive error message indicating which input is missing. Do not raise an exception.
 
 ### Additional Tools (if any)
 
@@ -81,9 +77,9 @@ First, the search_listings() runs and returns a list.
 if empty,
         returns an error message specifying that no relevent messages could be found and that user should try again with a different input.
 If not empty,
-        Selected_item=item (item in results[]) and proceed to suggest_outfit().
-
-        Suggest_outfit() checks if the list if empty or not.
+        session["selected_item"] = results[0] and proceed to suggest_outfit().
+        
+        suggest_outfit() checks whether wardrobe["items"] is empty.        
         if empty,
                general styling ideas(what kinds of items pair well, what vibe it suits, etc.).
         if not empty,
